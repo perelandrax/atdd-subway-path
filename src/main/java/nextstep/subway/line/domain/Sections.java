@@ -27,20 +27,18 @@ public class Sections {
             return;
         }
 
-        validateToAddSectionStationsAlreadyAdded(section);
-        validateToAddSectionStationNone(section);
+        validateAddSection(section);
 
         if (addSectionInTheMiddle(section)) {
             return;
         }
 
-        if (addSectionToUpStation(section)) {
-            return;
-        }
+        sections.add(section);
+    }
 
-        if (addSectionToDownStation(section)) {
-            return;
-        }
+    private void validateAddSection(Section section) {
+        validateToAddSectionStationsAlreadyAdded(section);
+        validateToAddSectionStationNone(section);
     }
 
     public List<Section> getAll() {
@@ -105,7 +103,6 @@ public class Sections {
         if (upStationMatchedSection != null) {
             validateToAddSectionDistance(upStationMatchedSection, section);
 
-            int position = sections.indexOf(upStationMatchedSection);
             Section afterSection = new Section(
                     section.getLine(),
                     section.getDownStation(),
@@ -113,9 +110,9 @@ public class Sections {
                     upStationMatchedSection.getDistance() - section.getDistance()
             );
 
-            sections.remove(position);
-            sections.add(position, section);
-            sections.add(position + 1, afterSection);
+            sections.remove(upStationMatchedSection);
+            sections.add(section);
+            sections.add(afterSection);
 
             return true;
         }
@@ -132,7 +129,6 @@ public class Sections {
         if (downStationMatchedSection != null) {
             validateToAddSectionDistance(downStationMatchedSection, section);
 
-            int position = sections.indexOf(downStationMatchedSection);
             Section beforeSection = new Section(
                     section.getLine(),
                     downStationMatchedSection.getUpStation(),
@@ -140,32 +136,10 @@ public class Sections {
                     downStationMatchedSection.getDistance() - section.getDistance()
             );
 
-            sections.remove(position);
-            sections.add(position, beforeSection);
-            sections.add(position + 1, section);
-
-            return true;
-        }
-
-        return false;
-    }
-
-    private boolean addSectionToUpStation(Section section) {
-        Section firstSection = sections.get(0);
-
-        if (firstSection.getUpStation() == section.getDownStation()) {
-            sections.add(0, section);
-            return true;
-        }
-
-        return false;
-    }
-
-    private boolean addSectionToDownStation(Section section) {
-        Section lastSection = sections.get(sections.size() - 1);
-
-        if (lastSection.getDownStation() == section.getUpStation()) {
+            sections.remove(downStationMatchedSection);
             sections.add(section);
+            sections.add(beforeSection);
+
             return true;
         }
 
@@ -194,18 +168,7 @@ public class Sections {
 
     public void remove(Station station) {
         validateToRemove(station);
-
-        if (removeUpStation(station)) {
-            return;
-        }
-
-        if (removeDownStation(station)) {
-            return;
-        }
-
-        if (removeMiddleStation(station)) {
-            return;
-        }
+        removeStation(station);
     }
 
     private void validateToRemove(Station station) {
@@ -219,61 +182,36 @@ public class Sections {
                 .orElseThrow(() -> new RuntimeException());
     }
 
-    private boolean removeUpStation(Station station) {
-        if (getFirstStation() == station) {
-            sections.remove(0);
-            return true;
-        }
-
-        return false;
-    }
-
-    private Station getFirstStation() {
-        List<Station> stations = getStations();
-        return stations.get(0);
-    }
-
-    private boolean removeDownStation(Station station) {
-        if (getLastStation() == station) {
-            sections.remove(sections.size() - 1);
-            return true;
-        }
-
-        return false;
-    }
-
-    private Station getLastStation() {
-        List<Station> stations = getStations();
-        return stations.get(stations.size() - 1);
-    }
-
-    private boolean removeMiddleStation(Station station) {
-        Section upSection = sections.stream()
-                .filter(it -> it.getDownStation() == station)
-                .findFirst()
-                .orElse(null);
-
-        Section downSection = sections.stream()
+    private void removeStation(Station station) {
+        Section upStationMatchedSection = sections.stream()
                 .filter(it -> it.getUpStation() == station)
                 .findFirst()
                 .orElse(null);
 
-        if (upSection == null && downSection == null) {
-            return false;
+        Section downStationMatchedSection = sections.stream()
+                .filter(it -> it.getDownStation() == station)
+                .findFirst()
+                .orElse(null);
+
+        if (upStationMatchedSection != null && downStationMatchedSection == null) {
+            sections.remove(upStationMatchedSection);
+            return;
         }
 
-        int position = sections.indexOf(upSection);
+        if (upStationMatchedSection == null && downStationMatchedSection != null) {
+            sections.remove(downStationMatchedSection);
+            return;
+        }
+
         Section mergedSection = new Section(
-                upSection.getLine(),
-                upSection.getUpStation(),
-                downSection.getDownStation(),
-                upSection.getDistance() + downSection.getDistance()
+                upStationMatchedSection.getLine(),
+                downStationMatchedSection.getUpStation(),
+                upStationMatchedSection.getDownStation(),
+                upStationMatchedSection.getDistance() + downStationMatchedSection.getDistance()
         );
 
-        sections.add(position, mergedSection);
-        sections.remove(upSection);
-        sections.remove(downSection);
-
-        return true;
+        sections.remove(upStationMatchedSection);
+        sections.remove(downStationMatchedSection);
+        sections.add(mergedSection);
     }
 }
